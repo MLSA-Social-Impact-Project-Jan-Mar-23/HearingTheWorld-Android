@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main_nav_graph.xml"
+    app:startDestination="@id/imageCaptureFragment">
+
+    <fragment
+        android:id="@+id/imageCaptureFragment"
+        android:name="com.mlsa.hearingtheworld.ui.imageCapture.ImageCaptureFragment"
+        android:label="ImageCaptureFragment"
+        tools:layout="@layout/image_capture_fragment"/>
+</navigation>

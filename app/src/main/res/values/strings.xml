@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">HearingTheWorld</string>
+    <string name="firstname">First Name</string>
+    <string name="short_story_example"> The old man sat on the park bench, watching the children play. He smiled as they laughed and chased each other around. Suddenly, a small boy stumbled and fell. The old man rushed over to help him up and the boy looked up at him with a big grin. In that moment, the old man knew he had made a new friend. </string>
 </resources>
