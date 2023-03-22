@@ -5,6 +5,7 @@ import androidx.databinding.ktx.BuildConfig
 import com.mlsa.hearingtheworld.utils.BASEURL
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
+import com.mlsa.hearingtheworld.network.ApiService
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -64,8 +65,8 @@ class AppModule {
         .addConverterFactory(GsonConverterFactory.create())
         .build()
 
-//    @Provides
-//    fun provideApiService(retrofit: Retrofit): ApiService = retrofit.create(ApiService::class.java)
+    @Provides
+    fun provideApiService(retrofit: Retrofit): ApiService = retrofit.create(ApiService::class.java)
 
 
 }

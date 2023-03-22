@@ -10,6 +10,7 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.MediaStore
 import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
 import android.util.Log
 import android.view.*
 import android.widget.Toast
@@ -22,11 +23,19 @@ import androidx.camera.video.*
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
 import com.mlsa.hearingtheworld.databinding.ImageCaptureFragmentBinding
+import com.mlsa.hearingtheworld.network.Resource
+import com.mlsa.hearingtheworld.network.UploadRequestBody
 import com.mlsa.hearingtheworld.preferences.SessionManager
+import com.mlsa.hearingtheworld.ui.imageCapture.viewModel.ImageCaptureViewModel
 import com.mlsa.hearingtheworld.utils.autoCleared
+import com.mlsa.hearingtheworld.utils.getFileName
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.delay
+import okhttp3.MultipartBody
+import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.ExecutorService
@@ -35,10 +44,11 @@ import javax.inject.Inject
 
 
 @AndroidEntryPoint
-class ImageCaptureFragment : Fragment(), TextToSpeech.OnInitListener {
+class ImageCaptureFragment : Fragment(), TextToSpeech.OnInitListener,
+UploadRequestBody.UploadCallBack{
 
     private var binding: ImageCaptureFragmentBinding by autoCleared()
-//    private val viewModel: PlotGeoFenceViewModel by viewModels()
+    private val viewModel: ImageCaptureViewModel by viewModels()
 
     private var imageCapture: ImageCapture? = null
     private var recording: Recording? = null
@@ -61,6 +71,8 @@ class ImageCaptureFragment : Fragment(), TextToSpeech.OnInitListener {
     @SuppressLint("MissingPermission")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        setupObserver()
 
         tts = TextToSpeech(requireContext(), this)
 
@@ -130,18 +142,37 @@ class ImageCaptureFragment : Fragment(), TextToSpeech.OnInitListener {
                         onImageSaved(output: ImageCapture.OutputFileResults){
                     val msg = "Photo capture succeeded: ${output.savedUri}"
                     //todo: send image to server
-                    //lo
+                    var selectedImageUri=output.savedUri
+                    if (output.savedUri != null) {
+                        val parcelFileDescriptor =
+                            requireContext().contentResolver.openFileDescriptor(selectedImageUri!!, "r", null)
+                                ?: return
+
+                        val inputStream = FileInputStream(parcelFileDescriptor.fileDescriptor)
+                        val file = File(
+                            requireContext().cacheDir,
+                            requireContext().contentResolver.getFileName(selectedImageUri)
+                        )
+                        val outputStream = FileOutputStream(file)
+                        inputStream.copyTo(outputStream)
+
+                        val body = UploadRequestBody(file, "image", this@ImageCaptureFragment)
+                        viewModel.generateStory(
+                            MultipartBody.Part.createFormData("image", file.name, body)
+                        )
+                    }
                     //todo: open bottom sheet
-                    ResultBottomSheetFragment().show(requireActivity().supportFragmentManager, "newStory")
+                    //ResultBottomSheetFragment().show(requireActivity().supportFragmentManager, "newStory")
                     //todo: load the result
                     //todo: speak out
-                    Toast.makeText(requireContext(), msg, Toast.LENGTH_SHORT).show()
+                    //Toast.makeText(requireContext(), msg, Toast.LENGTH_SHORT).show()
                     Log.d(TAG, msg)
 
                 }
             }
         )
     }
+
 
 
     private fun startCamera() {
@@ -173,6 +204,28 @@ class ImageCaptureFragment : Fragment(), TextToSpeech.OnInitListener {
             }
 
         }, ContextCompat.getMainExecutor(requireContext()))
+    }
+
+    private fun setupObserver() {
+        viewModel.storyResponse.observe(viewLifecycleOwner) {
+            it?.let {
+                when (it.status) {
+                    Resource.Status.SUCCESS -> {
+                        it.data?.let { storyResponse ->
+                            speakOut(storyResponse.story)
+                            //binding.storyText.text = storyResponse.story
+                        }
+
+                    }
+                    Resource.Status.ERROR -> {
+
+                    }
+                    Resource.Status.LOADING -> {
+
+                    }
+                }
+            }
+        }
     }
 
     private fun allPermissionsGranted() = REQUIRED_PERMISSIONS.all {
@@ -229,6 +282,17 @@ class ImageCaptureFragment : Fragment(), TextToSpeech.OnInitListener {
             } else {
 
             }
+            tts!!.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+                override fun onDone(utteranceId: String) {
+                    binding.viewFinder.isClickable= true
+                }
+
+                override fun onError(utteranceId: String) {}
+                override fun onStart(utteranceId: String) {
+                    binding.viewFinder.isClickable= false
+
+                }
+            })
         } else{
             Toast.makeText(requireContext(), "Something went wrong!", Toast.LENGTH_SHORT).show()
         }
@@ -238,6 +302,9 @@ class ImageCaptureFragment : Fragment(), TextToSpeech.OnInitListener {
         tts!!.speak(text, TextToSpeech.QUEUE_FLUSH, null,"")
     }
 
+    override fun onProgressUpdate(percentage: Int) {
+
+    }
 }
 
 

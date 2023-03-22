@@ -9,12 +9,16 @@ import android.util.Log
 import android.view.*
 import android.widget.Toast
 import androidx.camera.video.*
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.mlsa.hearingtheworld.R
 import com.mlsa.hearingtheworld.databinding.ResultBottomSheetFragmentBinding
+import com.mlsa.hearingtheworld.network.Resource
 import com.mlsa.hearingtheworld.preferences.SessionManager
+import com.mlsa.hearingtheworld.ui.imageCapture.viewModel.ImageCaptureViewModel
 import com.mlsa.hearingtheworld.utils.autoCleared
 import dagger.hilt.android.AndroidEntryPoint
 import java.util.*
@@ -26,7 +30,7 @@ class ResultBottomSheetFragment : BottomSheetDialogFragment(),  TextToSpeech.OnI
 
     private var binding: ResultBottomSheetFragmentBinding by autoCleared()
 
-    //    private val viewModel: PlotGeoFenceViewModel by viewModels()
+        private val viewModel: ImageCaptureViewModel by viewModels()
     @Inject
     lateinit var sessionManager: SessionManager
     private var tts: TextToSpeech? = null
@@ -61,11 +65,31 @@ class ResultBottomSheetFragment : BottomSheetDialogFragment(),  TextToSpeech.OnI
     }
 
     private fun setUpObserver() {
+
+        viewModel.storyResponse.observe(viewLifecycleOwner){
+            it?.let {
+                when(it.status){
+                    Resource.Status.SUCCESS -> {
+                        it.data?.let { storyResponse ->
+                            speakOut(storyResponse.story)
+                            binding.storyText.text= storyResponse.story
+                        }
+
+                    }
+                    Resource.Status.ERROR -> {
+
+                    }
+                    Resource.Status.LOADING -> {
+
+                    }
+                }
+            }
+        }
         //todo: recieve text
-        Handler(Looper.getMainLooper()).postDelayed({
-            binding.progressCircular.visibility= View.GONE
-            speakOut(getString(R.string.short_story_example))
-        },3000)
+//        Handler(Looper.getMainLooper()).postDelayed({
+//            binding.progressCircular.visibility= View.GONE
+//            speakOut(getString(R.string.short_story_example))
+//        },3000)
     }
 
     override fun onInit(status: Int) {
